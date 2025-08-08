@@ -18,8 +18,16 @@ axios.defaults.baseURL = API_BASE_URL;
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [token, setToken] = useState(localStorage.getItem('musikkhylla_token'));
+  const [token, setToken] = useState(null);
   const [interceptorReady, setInterceptorReady] = useState(false);
+
+  // Initialize token from localStorage on mount
+  useEffect(() => {
+    const storedToken = localStorage.getItem('musikkhylla_token');
+    if (storedToken) {
+      setToken(storedToken);
+    }
+  }, []);
 
   // Set up axios interceptor for auth token
   useEffect(() => {
@@ -43,25 +51,32 @@ export const AuthProvider = ({ children }) => {
     };
   }, [token]);
 
-  // Check if user is authenticated on app load (not after login)
+  // Check if user is authenticated when we have a token
   useEffect(() => {
     const checkAuth = async () => {
-      // Only check auth if we have a token but no user (app startup)
-      if (token && !user && interceptorReady) {
+      if (token && interceptorReady) {
         try {
           const response = await axios.get('/auth/me');
-          setUser(response.data.user);
+          setUser(response.data); // Backend returns user directly, not wrapped in user field
         } catch (error) {
           // Token is invalid, remove it
           localStorage.removeItem('musikkhylla_token');
           setToken(null);
+          setUser(null);
         }
+      } else if (!token && interceptorReady) {
+        // No token, make sure user is cleared and loading is done
+        setUser(null);
       }
-      setIsLoading(false);
+      
+      // Always set loading to false once interceptor is ready
+      if (interceptorReady) {
+        setIsLoading(false);
+      }
     };
 
     checkAuth();
-  }, [token, interceptorReady, user]);
+  }, [token, interceptorReady]);
 
   const requestLoginCode = async (email) => {
     try {
