@@ -4,16 +4,19 @@ import { HTML5Backend } from 'react-dnd-html5-backend';
 import axios from 'axios';
 import Album from './Album';
 import AlbumDetailModal from './AlbumDetailModal';
+import AddAlbumModal from './AddAlbumModal';
 import { MusicRackContainer, ModeToggle } from './AlbumStyles';
 import { useAuth } from '../context/AuthContext';
 
 const MusicRack = () => {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [albums, setAlbums] = useState([]);
   const [selectedAlbum, setSelectedAlbum] = useState(null);
   const [isReorderMode, setIsReorderMode] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [isAddingAlbum, setIsAddingAlbum] = useState(false);
 
   // Fetch albums from backend
   useEffect(() => {
@@ -75,6 +78,25 @@ const MusicRack = () => {
     setIsReorderMode(!isReorderMode);
   };
 
+  const handleAddAlbum = async (albumData) => {
+    setIsAddingAlbum(true);
+    try {
+      const response = await axios.post('/albums', albumData);
+      const newAlbum = response.data;
+      
+      // Add the new album to the state
+      setAlbums(prevAlbums => [...prevAlbums, newAlbum]);
+      
+      setIsAddingAlbum(false);
+      return true; // Success
+    } catch (err) {
+      console.error('Failed to add album:', err);
+      setError(err.response?.data?.detail || 'Failed to add album');
+      setIsAddingAlbum(false);
+      return false; // Failure
+    }
+  };
+
   if (loading) {
     return (
       <MusicRackContainer>
@@ -111,37 +133,44 @@ const MusicRack = () => {
   return (
     <DndProvider backend={HTML5Backend}>
       <div style={{ position: 'relative' }}>
-        <div style={{ 
-          position: 'absolute', 
-          top: '20px', 
-          left: '20px', 
-          color: 'white',
-          background: 'rgba(0,0,0,0.2)',
-          padding: '10px 15px',
-          borderRadius: '8px',
-          fontSize: '14px'
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '20px',
+          background: 'rgba(0,0,0,0.1)',
+          marginBottom: '20px'
         }}>
-          Welcome, {user?.email}
-          <button 
-            onClick={logout}
+          <ModeToggle onClick={toggleMode} isReorderMode={isReorderMode}>
+            {isReorderMode ? '🔄 Reorder Mode' : '👆 View Mode'}
+          </ModeToggle>
+          
+          <button
+            onClick={() => setShowAddModal(true)}
             style={{
-              marginLeft: '15px',
-              padding: '5px 10px',
-              background: 'rgba(255,255,255,0.2)',
+              padding: '12px 24px',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
               color: 'white',
-              border: '1px solid rgba(255,255,255,0.3)',
-              borderRadius: '4px',
+              border: 'none',
+              borderRadius: '8px',
               cursor: 'pointer',
-              fontSize: '12px'
+              fontSize: '16px',
+              fontWeight: '600',
+              transition: 'all 0.2s ease',
+              boxShadow: '0 2px 8px rgba(102, 126, 234, 0.3)'
+            }}
+            onMouseOver={(e) => {
+              e.target.style.transform = 'translateY(-1px)';
+              e.target.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.4)';
+            }}
+            onMouseOut={(e) => {
+              e.target.style.transform = 'translateY(0)';
+              e.target.style.boxShadow = '0 2px 8px rgba(102, 126, 234, 0.3)';
             }}
           >
-            Logout
+            ➕ Add Album
           </button>
         </div>
-        
-        <ModeToggle onClick={toggleMode} isReorderMode={isReorderMode}>
-          {isReorderMode ? '🔄 Reorder Mode' : '👆 View Mode'}
-        </ModeToggle>
         
         <MusicRackContainer>
           {albums.map((album, index) => (
@@ -159,6 +188,13 @@ const MusicRack = () => {
         {selectedAlbum && (
           <AlbumDetailModal album={selectedAlbum} onClose={closeModal} />
         )}
+
+        <AddAlbumModal
+          isOpen={showAddModal}
+          onClose={() => setShowAddModal(false)}
+          onSubmit={handleAddAlbum}
+          isLoading={isAddingAlbum}
+        />
       </div>
     </DndProvider>
   );

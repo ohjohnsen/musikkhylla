@@ -49,14 +49,14 @@ const Album = ({ album, index, moveAlbum, onClick, isReorderMode }) => {
   return (
     <AlbumSpine
       ref={ref}
-      height={250 + (index % 3) * 50} // Vary heights for visual interest
+      height={300} // Fixed height for all albums
       color={generateColor(album.title)}
       isDragging={isDragging}
       isOver={isOver}
       onClick={handleClick}
       style={{ cursor: isReorderMode ? 'grab' : 'pointer' }}
     >
-      <AlbumText height={250 + (index % 3) * 50}>
+      <AlbumText height={300}>
         {album.artist} - {album.title}
       </AlbumText>
     </AlbumSpine>

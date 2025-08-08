@@ -41,16 +41,16 @@ export const AlbumSpine = styled.div`
 
 export const AlbumText = styled.div`
   position: absolute;
-  bottom: 10px;
-  left: 50%;
-  transform: translateX(-50%) rotate(-90deg);
-  transform-origin: center;
+  bottom: 20px;
+  left: 30px;
+  transform: rotate(-90deg);
+  transform-origin: left bottom;
   white-space: nowrap;
   color: white;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-  max-width: ${props => props.height - 20 || 280}px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+  max-width: 260px;
   overflow: hidden;
   text-overflow: ellipsis;
 `;
