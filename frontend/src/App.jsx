@@ -1,8 +1,34 @@
 import React from 'react';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import MusicRack from './components/MusicRack';
+import Login from './components/Login';
 import './App.css';
 
-function App() {
+function AppContent() {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="App">
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '100vh',
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          color: 'white',
+          fontSize: '18px'
+        }}>
+          Loading...
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Login />;
+  }
+
   return (
     <div className="App">
       <header style={{ 
@@ -22,6 +48,14 @@ function App() {
         <MusicRack />
       </main>
     </div>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 

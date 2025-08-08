@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
+import axios from 'axios';
 import Album from './Album';
 import AlbumDetailModal from './AlbumDetailModal';
 import { MusicRackContainer, ModeToggle } from './AlbumStyles';
+import { useAuth } from '../context/AuthContext';
 
 const MusicRack = () => {
+  const { user, logout } = useAuth();
   const [albums, setAlbums] = useState([]);
   const [selectedAlbum, setSelectedAlbum] = useState(null);
   const [isReorderMode, setIsReorderMode] = useState(false);
@@ -14,76 +17,28 @@ const MusicRack = () => {
 
   // Fetch albums from backend
   useEffect(() => {
-    const fetchAlbums = async () => {
+    // Only fetch albums if user is authenticated
+    if (!user) return;
+    
+    const fetchAlbums = async (retryCount = 0) => {
       try {
-        const response = await fetch('http://localhost:3001/api/albums');
-        if (!response.ok) {
-          throw new Error('Failed to fetch albums');
-        }
-        const data = await response.json();
-        setAlbums(data.albums);
+        const response = await axios.get('/albums');
+        setAlbums(response.data.albums);
+        setLoading(false);
       } catch (err) {
-        setError(err.message);
-        // Fallback to sample data if API fails
-        setAlbums([
-          {
-            id: 1,
-            title: "Abbey Road",
-            artist: "The Beatles",
-            year: 1969,
-            coverUrl: "https://via.placeholder.com/300x300?text=Abbey+Road",
-            spotifyUrl: "#",
-            appleMusicUrl: "#",
-            tidalUrl: "#"
-          },
-          {
-            id: 2,
-            title: "Dark Side of the Moon",
-            artist: "Pink Floyd",
-            year: 1973,
-            coverUrl: "https://via.placeholder.com/300x300?text=Dark+Side",
-            spotifyUrl: "#",
-            appleMusicUrl: "#",
-            tidalUrl: "#"
-          },
-          {
-            id: 3,
-            title: "Thriller",
-            artist: "Michael Jackson",
-            year: 1982,
-            coverUrl: "https://via.placeholder.com/300x300?text=Thriller",
-            spotifyUrl: "#",
-            appleMusicUrl: "#",
-            tidalUrl: "#"
-          },
-          {
-            id: 4,
-            title: "Nevermind",
-            artist: "Nirvana",
-            year: 1991,
-            coverUrl: "https://via.placeholder.com/300x300?text=Nevermind",
-            spotifyUrl: "#",
-            appleMusicUrl: "#",
-            tidalUrl: "#"
-          },
-          {
-            id: 5,
-            title: "Kind of Blue",
-            artist: "Miles Davis",
-            year: 1959,
-            coverUrl: "https://via.placeholder.com/300x300?text=Kind+of+Blue",
-            spotifyUrl: "#",
-            appleMusicUrl: "#",
-            tidalUrl: "#"
-          }
-        ]);
-      } finally {
+        // If it's a 401 and this is our first attempt, retry once after a short delay
+        if (err.response?.status === 401 && retryCount === 0) {
+          setTimeout(() => fetchAlbums(1), 200);
+          return;
+        }
+        
+        setError(err.response?.data?.error || 'Failed to fetch albums');
         setLoading(false);
       }
     };
 
     fetchAlbums();
-  }, []);
+  }, [user]); // Dependency on user ensures this runs after authentication
 
   const moveAlbum = useCallback((fromIndex, toIndex) => {
     setAlbums(prevAlbums => {
@@ -94,6 +49,16 @@ const MusicRack = () => {
     });
   }, []);
 
+  // Save album order to backend when reorder mode is turned off
+  const saveAlbumOrder = useCallback(async () => {
+    try {
+      await axios.post('/albums/reorder', { albums });
+    } catch (err) {
+      console.error('Failed to save album order:', err);
+      // You might want to show a toast notification here
+    }
+  }, [albums]);
+
   const handleAlbumClick = (album) => {
     setSelectedAlbum(album);
   };
@@ -103,6 +68,10 @@ const MusicRack = () => {
   };
 
   const toggleMode = () => {
+    if (isReorderMode) {
+      // Save order when exiting reorder mode
+      saveAlbumOrder();
+    }
     setIsReorderMode(!isReorderMode);
   };
 
@@ -114,10 +83,27 @@ const MusicRack = () => {
     );
   }
 
-  if (error && albums.length === 0) {
+  if (error) {
     return (
       <MusicRackContainer>
-        <p style={{ color: 'white', fontSize: '18px' }}>Error loading albums: {error}</p>
+        <div style={{ textAlign: 'center', color: 'white' }}>
+          <p style={{ fontSize: '18px', marginBottom: '20px' }}>
+            Error loading albums: {error}
+          </p>
+          <button 
+            onClick={() => window.location.reload()} 
+            style={{
+              padding: '10px 20px',
+              background: 'white',
+              color: '#333',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer'
+            }}
+          >
+            Retry
+          </button>
+        </div>
       </MusicRackContainer>
     );
   }
@@ -125,6 +111,34 @@ const MusicRack = () => {
   return (
     <DndProvider backend={HTML5Backend}>
       <div style={{ position: 'relative' }}>
+        <div style={{ 
+          position: 'absolute', 
+          top: '20px', 
+          left: '20px', 
+          color: 'white',
+          background: 'rgba(0,0,0,0.2)',
+          padding: '10px 15px',
+          borderRadius: '8px',
+          fontSize: '14px'
+        }}>
+          Welcome, {user?.email}
+          <button 
+            onClick={logout}
+            style={{
+              marginLeft: '15px',
+              padding: '5px 10px',
+              background: 'rgba(255,255,255,0.2)',
+              color: 'white',
+              border: '1px solid rgba(255,255,255,0.3)',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '12px'
+            }}
+          >
+            Logout
+          </button>
+        </div>
+        
         <ModeToggle onClick={toggleMode} isReorderMode={isReorderMode}>
           {isReorderMode ? '🔄 Reorder Mode' : '👆 View Mode'}
         </ModeToggle>
