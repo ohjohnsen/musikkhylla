@@ -1,0 +1,18 @@
+[project]
+name = "backend"
+version = "0.1.0"
+description = "Backend API for musikkhylla music rack application"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "flask>=3.1.1",
+    "flask-cors>=6.0.1",
+    "python-dotenv>=1.1.1",
+    "requests>=2.32.4",
+]
+
+[project.scripts]
+dev = "app:main"
+
+[tool.uv]
+dev-dependencies = []
